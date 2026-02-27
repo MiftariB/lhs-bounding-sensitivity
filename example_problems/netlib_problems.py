@@ -39,7 +39,7 @@ def load_netlib_problem(problem_name):
         c=c.transpose(),
         minimize=True,
         range=(-1, 1))
-    problem.dual()
+    problem._positive = problem
 
     return problem
 

@@ -66,4 +66,3 @@ problem = Problem_sparse(
                 c=c,
                 minimize=True,
                 range=(-0.85, 1-0.887))
-problem.dual()

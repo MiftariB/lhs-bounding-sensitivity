@@ -42,4 +42,3 @@ d_col[2*8760:3*8760] = np.arange(1903183, 1903183+8760)
 d = sp.csr_array(sp.coo_matrix((d_data, (d_row, d_col)), shape=a_2.shape))
 
 problem = LE_Problem_sparse(a_1, b_1, a_2, d, b_2, c, True, (-0.85, 1-0.887))
-problem.dual()

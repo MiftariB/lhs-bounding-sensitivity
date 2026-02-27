@@ -47,4 +47,3 @@ problem = Problem_sparse(a_1_eq=a_1_eq,
                          c=c,
                          minimize=minimize,
                          range=(0, 0.05))
-problem.dual()
