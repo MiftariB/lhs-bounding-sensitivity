@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
+from cplex._internal._constants import CPX_ALG_BARRIER
+
 
 class NoSolution(Exception):
     pass
@@ -82,25 +84,36 @@ class CplexModel:
         self.model = Cplex()
         self.nb_var = 0
         self.nb_constr = 0
+        self.is_milp = False
         self.disable_crossover = True
 
-    def add_var(self, nb_var, lb=None, ub=None):
+    def add_var(self, nb_var, lb=None, ub=None, types=None):
         import cplex
         self.nb_var = nb_var
+
+        if types is None:
+            types = [self.model.variables.type.continuous] * nb_var
+        else:
+            assert len(types) == nb_var
 
         if lb is None:
             lb = [-cplex.infinity]*nb_var
         else:
             lb = [i if i is not None else -cplex.infinity for i in lb]
+            assert len(lb) == nb_var
 
         if ub is None:
             ub = [cplex.infinity]*nb_var
         else:
-            ub = [i if i is not None else cplex.infinity for i in lb]
-        self.model.variables.add(lb=lb,
-                                 ub=ub)
+            ub = [i if i is not None else cplex.infinity for i in ub]
+            assert len(ub) == nb_var
+        self.model.variables.add(lb=lb, ub=ub, types=types)
+
+        if any(t in [self.model.variables.type.integer, self.model.variables.type.binary] for t in types):
+            self.is_milp = True
 
     def add_constr(self, matrix: sp.csr_array, sense: list, rhs: np.ndarray):
+        first_idx = self.nb_constr
         nb_constr, _ = matrix.shape
         if nb_constr != 0:
             coo_mat = matrix.tocoo()
@@ -113,11 +126,16 @@ class CplexModel:
             else:
                 matrix_sense = "G"
 
-            self.model.linear_constraints.add(senses=[matrix_sense] * nb_constr, rhs=rhs.tolist()), max(coo_row)
+            self.model.linear_constraints.add(senses=[matrix_sense] * nb_constr, rhs=rhs.tolist())
             matrix_zipped = zip(coo_row.tolist(), coo_col.tolist(), coo_data.astype(float).tolist())
 
             self.model.linear_constraints.set_coefficients(matrix_zipped)
             self.nb_constr += nb_constr
+        return first_idx, self.nb_constr
+
+    def delete_constr(self, indices):
+        self.model.linear_constraints.delete(indices)
+        self.nb_constr -= len(indices)
 
     def set_obj(self, objective: np.ndarray, sense: str):
         pair_obj = [(i, val) for i, val in enumerate(objective.flatten())]
@@ -127,18 +145,22 @@ class CplexModel:
         else:
             self.model.objective.set_sense(self.model.objective.sense.maximize)
 
-    def optimize(self):
-        self.model.parameters.lpmethod.set(self.model.parameters.lpmethod.values.concurrent)
-        if self.disable_crossover:
-            self.model.parameters.solutiontype.set(2)
-        else:
-            self.model.parameters.solutiontype.set(0)
-        #self.model.parameters.simplex.tolerances.optimality.set(1e-9)
+    def optimize(self, lpmethod=CPX_ALG_BARRIER, maxtime=None):
+        if not self.is_milp:
+            self.model.set_problem_type(self.model.problem_type.LP)
+        self.model.parameters.lpmethod.set(lpmethod)
+        #if self.disable_crossover:
+        #    self.model.parameters.solutiontype.set(2)
+        #else:
+        self.model.parameters.solutiontype.set(0)
+        self.model.parameters.simplex.tolerances.optimality.set(1e-9)
         self.model.set_log_stream(None)
         self.model.set_results_stream(None)
         self.model.parameters.threads.set(5)
         self.model.parameters.timelimit.set(5400)
         #self.model.parameters.barrier.convergetol.set(1e-4)
+        if maxtime is not None:
+            self.model.parameters.timelimit.set(maxtime)
         self.model.solve()
 
     def activate_crossover(self):
@@ -179,7 +201,7 @@ class CplexModel:
 
     def get_status(self):
         status_code = self.model.solution.get_status()
-        stopped = {6, 102, 10, 11, 12, 13, 107}
+        stopped = {6, 102, 10, 11, 12, 13, 107, 108}
         if status_code == 1 or status_code == 101:
             ret_status = "optimal"
         elif status_code in stopped:

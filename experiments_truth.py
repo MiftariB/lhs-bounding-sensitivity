@@ -33,7 +33,7 @@ problem = PROBLEMS[args.problem]()
 space = np.linspace(*problem.range, N)
 
 start_time = time.time()
-out = truth(problem, [space[0], space[-1]])["bounds"][0]["bound"](space)
+out = truth(problem, [space[0], space[-1]], 120)["bounds"][0]["bound"](space)
 end_time = time.time() - start_time
 
 np.savez(filename_npz, out)

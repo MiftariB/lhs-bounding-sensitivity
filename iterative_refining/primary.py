@@ -14,7 +14,8 @@ def max_difference_between_bounds(start, end, upper_bounds, lower_bounds):
     bx = np.linspace(start, end, 1000)
     min_upper_bound = np.minimum.reduce([np.nan_to_num(fct(bx), nan=np.inf) for fct in upper_bounds])
     max_lower_bound = np.maximum.reduce([np.nan_to_num(fct(bx), nan=-np.inf) for fct in lower_bounds])
-    return (min_upper_bound - max_lower_bound).max()
+    #return (min_upper_bound - max_lower_bound).max() * (end - start)
+    return (min_upper_bound - max_lower_bound).sum() * (end - start)
 
 
 def iterative_refining(problem, upper_bounds, lower_bounds, max_y_delta, min_x_delta=-100):
@@ -62,8 +63,8 @@ def iterative_refining_wfs(problem, upper_bounds, lower_bounds, max_y_delta, min
     """
     if min_x_delta < 0:
         min_x_delta = (problem.range[1] - problem.range[0]) / -min_x_delta
-    if min_x_delta == 0:
-        raise Exception("Please choose a non-zero min_x_delta. Running with 0 would lead to infinite loops.")
+    #if min_x_delta == 0:
+    #    raise Exception("Please choose a non-zero min_x_delta. Running with 0 would lead to infinite loops.")
 
     todo = []
     done = []
@@ -73,8 +74,9 @@ def iterative_refining_wfs(problem, upper_bounds, lower_bounds, max_y_delta, min
 
     def compute_interval(lbd_l, lbd_r):
         if lbd_r - lbd_l <= min_x_delta:
-            mid = (lbd_r + lbd_l)/2
-            gt_points.append(Point(mid, solve(problem, mid), lbd_l, lbd_r, time.time() - start_time))
+            if ground_truth_between_intervals:
+                mid = (lbd_r + lbd_l)/2
+                gt_points.append(Point(mid, solve(problem, mid), lbd_l, lbd_r, time.time() - start_time))
             return
 
         ub = [z["bound"] for fct in upper_bounds for y in [fct.ub(problem, [lbd_l, lbd_r])] if y is not None for z in

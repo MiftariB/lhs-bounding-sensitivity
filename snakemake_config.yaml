@@ -1,230 +1,315 @@
-PROBLEMS:
-  - belgian_model
-  - belgian_model_small
-  - microgrid
-  - netlib_25fv47
-  - netlib_25fv47__eq
-  - netlib_25fv47__ineq
-  - netlib_80bau3b
-  - netlib_80bau3b__ineq
-  - netlib_adlittle
-  - netlib_adlittle__ineq
-  - netlib_agg
-  - netlib_agg2
-  - netlib_agg2__ineq
-  - netlib_agg3
-  - netlib_agg3__ineq
-  - netlib_agg__ineq
-  - netlib_bandm
-  - netlib_bandm__eq
-  - netlib_beaconfd
-  - netlib_beaconfd__eq
-  - netlib_beaconfd__ineq
-  - netlib_blend
-  - netlib_blend__ineq
-  - netlib_bnl1
-  - netlib_bnl1__eq
-  - netlib_bnl1__ineq
-  - netlib_bnl2
-  - netlib_bnl2__eq
-  - netlib_bnl2__ineq
-  - netlib_boeing1
-  - netlib_boeing1__ineq
-  - netlib_boeing2
-  - netlib_boeing2__ineq
-  - netlib_bore3d
-  - netlib_bore3d__eq
-  - netlib_brandy
-  - netlib_brandy__eq
-  - netlib_brandy__ineq
-  - netlib_capri__eq
-  - netlib_cycle
-  - netlib_cycle__eq
-  - netlib_czprob
-  - netlib_czprob__eq
-  - netlib_czprob__ineq
-  - netlib_d2q06c
-  - netlib_d2q06c__eq
-  - netlib_d2q06c__ineq
-  - netlib_d6cube
-  - netlib_d6cube__eq
-  - netlib_degen2
-  - netlib_degen2__eq
-  - netlib_degen2__ineq
-  - netlib_degen3
-  - netlib_degen3__eq
-  - netlib_degen3__ineq
-  - netlib_e226
-  - netlib_e226__ineq
-  - netlib_etamacro__eq
-  - netlib_fffff800
-  - netlib_fffff800__eq
-  - netlib_fffff800__ineq
-  - netlib_finnis__ineq
-  - netlib_fit1d
-  - netlib_fit1d__ineq
-  - netlib_fit1p
-  - netlib_fit1p__eq
-  - netlib_fit2d
-  - netlib_fit2d__ineq
-  - netlib_fit2p
-  - netlib_fit2p__eq
-  - netlib_fit2p__ineq
-  - netlib_forplan
-  - netlib_forplan__ineq
-  - netlib_ganges
-  - netlib_ganges__eq
-  - netlib_ganges__ineq
-  - netlib_gfrd-pnc
-  - netlib_gfrd-pnc__eq
-  - netlib_gfrd-pnc__ineq
-  - netlib_greenbea
-  - netlib_greenbea__eq
-  - netlib_greenbea__ineq
-  - netlib_greenbeb
-  - netlib_greenbeb__eq
-  - netlib_greenbeb__ineq
-  - netlib_grow15
-  - netlib_grow15__eq
-  - netlib_grow15__ineq
-  - netlib_grow22
-  - netlib_grow22__eq
-  - netlib_grow22__ineq
-  - netlib_grow7
-  - netlib_grow7__eq
-  - netlib_grow7__ineq
-  - netlib_israel
-  - netlib_israel__ineq
-  - netlib_lotfi
-  - netlib_lotfi__ineq
-  - netlib_maros
-  - netlib_maros-r7
-  - netlib_maros-r7__eq
-  - netlib_maros__eq
-  - netlib_maros__ineq
-  - netlib_modszk1
-  - netlib_modszk1__eq
-  - netlib_nesm__eq
-  - netlib_perold
-  - netlib_perold__eq
-  - netlib_perold__ineq
-  - netlib_pilot4
-  - netlib_pilot4__eq
-  - netlib_pilot4__ineq
-  - netlib_pilot87__eq
-  - netlib_pilot__eq
-  - netlib_pilot__ineq
-  - netlib_pilotnov
-  - netlib_pilotnov__eq
-  - netlib_recipe
-  - netlib_recipe__ineq
-  - netlib_sc105
-  - netlib_sc105__ineq
-  - netlib_sc205
-  - netlib_sc205__ineq
-  - netlib_scagr25
-  - netlib_scagr25__ineq
-  - netlib_scagr7
-  - netlib_scagr7__ineq
-  - netlib_scfxm1
-  - netlib_scfxm1__ineq
-  - netlib_scfxm2
-  - netlib_scfxm2__ineq
-  - netlib_scfxm3
-  - netlib_scfxm3__ineq
-  - netlib_scorpion
-  - netlib_scorpion__ineq
-  - netlib_scrs8
-  - netlib_scrs8__eq
-  - netlib_scrs8__ineq
-  - netlib_scsd1
-  - netlib_scsd6
-  - netlib_scsd6__eq
-  - netlib_scsd8
-  - netlib_scsd8__eq
-  - netlib_sctap1
-  - netlib_sctap1__eq
-  - netlib_sctap1__ineq
-  - netlib_sctap2
-  - netlib_sctap2__eq
-  - netlib_sctap2__ineq
-  - netlib_sctap3
-  - netlib_sctap3__eq
-  - netlib_sctap3__ineq
-  - netlib_seba
-  - netlib_seba__eq
-  - netlib_seba__ineq
-  - netlib_share1b
-  - netlib_share1b__ineq
-  - netlib_share2b
-  - netlib_shell__eq
-  - netlib_ship04l
-  - netlib_ship04l__eq
-  - netlib_ship04l__ineq
-  - netlib_ship04s
-  - netlib_ship04s__eq
-  - netlib_ship04s__ineq
-  - netlib_ship08l
-  - netlib_ship08l__eq
-  - netlib_ship08l__ineq
-  - netlib_ship08s
-  - netlib_ship08s__eq
-  - netlib_ship08s__ineq
-  - netlib_ship12l
-  - netlib_ship12l__eq
-  - netlib_ship12l__ineq
-  - netlib_ship12s
-  - netlib_ship12s__eq
-  - netlib_ship12s__ineq
-  - netlib_sierra
-  - netlib_sierra__eq
-  - netlib_sierra__ineq
-  - netlib_standata
-  - netlib_standata__eq
-  - netlib_standata__ineq
-  - netlib_standgub
-  - netlib_standgub__eq
-  - netlib_standgub__ineq
-  - netlib_standmps
-  - netlib_standmps__eq
-  - netlib_standmps__ineq
-  - netlib_stocfor1
-  - netlib_stocfor1__ineq
-  - netlib_stocfor2
-  - netlib_stocfor2__eq
-  - netlib_stocfor2__ineq
-  - toy_1
-  - toy_2
-  - toy_3
-  - toy_4
+LP:
+#- belgian_model
+#- belgian_model_small
+- microgrid
+- toy_1
+- toy_2
+- toy_3
+- toy_4
+- netlib_beaconfd_eq
+- netlib_ship04s_ineq
+- netlib_stocfor1_ineq
+- netlib_israel_ineq
+- netlib_sierra_ineq
+- netlib_grow22_eq
+- netlib_standgub_eq
+- netlib_etamacro_eq
+- netlib_sctap3_eq
+- netlib_brandy_eq
+- netlib_czprob_eq
+- netlib_sctap2_eq
+- netlib_fit2p_eq
+- netlib_ship08l_eq
+- netlib_scagr25_ineq
+- netlib_ship04s_eq
+- netlib_fffff800_eq
+- netlib_perold_eq
+- netlib_bnl2_eq
+- netlib_fit1p_eq
+- netlib_ship12s_eq
+- netlib_d2q06c_eq
+- netlib_fit1d_ineq
+- netlib_pilotnov_eq
+- netlib_pilot4_eq
+- netlib_scrs8_ineq
+- netlib_fit2p_ineq
+- netlib_bandm_eq
+- netlib_fffff800_ineq
+- netlib_ship04l_ineq
+- netlib_woodw_ineq
+- netlib_maros_eq
+- netlib_scfxm3_eq
+- netlib_gfrd-pnc_eq
+- netlib_pilot_ineq
+- netlib_sc205_ineq
+- netlib_25fv47_ineq
+- netlib_bnl1_ineq
+- netlib_standgub_ineq
+- netlib_stocfor2_eq
+- netlib_scfxm1_ineq
+- netlib_tuff_ineq
+- netlib_seba_eq
+- netlib_brandy_ineq
+- netlib_lotfi_ineq
+- netlib_ganges_eq
+- netlib_d6cube_eq
+- netlib_tuff_eq
+- netlib_gfrd-pnc_ineq
+- netlib_fit2d_ineq
+- netlib_bore3d_eq
+- netlib_sctap1_ineq
+- netlib_czprob_ineq
+- netlib_greenbeb_eq
+- netlib_scfxm2_eq
+- netlib_grow15_ineq
+- netlib_degen2_eq
+- netlib_beaconfd_ineq
+- netlib_grow7_ineq
+- netlib_sctap2_ineq
+- netlib_cycle_ineq
+- netlib_ganges_ineq
+- netlib_scfxm3_ineq
+- netlib_scfxm1_eq
+- netlib_shell_eq
+- netlib_scsd6_eq
+- netlib_grow22_ineq
+- netlib_standata_ineq
+- netlib_bnl2_ineq
+- netlib_scfxm2_ineq
+- netlib_ship08l_ineq
+- netlib_degen3_eq
+- netlib_standata_eq
+- netlib_sctap3_ineq
+- netlib_recipe_ineq
+- netlib_ship12s_ineq
+- netlib_pilotnov_ineq
+- netlib_agg3_ineq
+- netlib_modszk1_eq
+- netlib_capri_eq
+- netlib_sctap1_eq
+- netlib_bore3d_ineq
+- netlib_grow7_eq
+- netlib_maros_ineq
+- netlib_scorpion_ineq
+- netlib_d2q06c_ineq
+- netlib_ship12l_eq
+- netlib_scrs8_eq
+- netlib_seba_ineq
+- netlib_degen2_ineq
+- netlib_bnl1_eq
+- netlib_standmps_eq
+- netlib_greenbeb_ineq
+- netlib_ship04l_eq
+- netlib_25fv47_eq
+- netlib_woodw_eq
+- netlib_ship08s_eq
+- netlib_pilot4_ineq
+- netlib_agg_ineq
+- netlib_grow15_eq
+- netlib_d6cube_ineq
+- netlib_share1b_ineq
+- netlib_perold_ineq
+- netlib_cycle_eq
+- netlib_blend_ineq
+- netlib_pilot_eq
+- netlib_degen3_ineq
+- netlib_ship12l_ineq
+- netlib_scsd8_eq
+- netlib_stocfor2_ineq
+- netlib_sc105_ineq
+- netlib_standmps_ineq
+- netlib_ship08s_ineq
+- netlib_sierra_eq
+- netlib_wood1p_eq
+
+MIP:
+- miplib_mzzv11_eq
+- miplib_app1-1_eq
+- miplib_nu25-pr12_ineq
+- miplib_neos-2987310-joes_ineq
+- miplib_neos-1582420_ineq
+- miplib_sp150x300d_ineq
+- miplib_mzzv11_ineq
+- miplib_drayage-100-23_eq
+- miplib_drayage-100-23_ineq
+- miplib_30n20b8_ineq
+- miplib_fastxgemm-n2r6s0t2_ineq
+- miplib_mzzv42z_ineq
+- miplib_mzzv42z_eq
+- miplib_neos-1171448_ineq
+- miplib_swath1_ineq
+- miplib_neos-860300_ineq
+- miplib_drayage-25-23_eq
+- miplib_mc11_eq
+- miplib_drayage-25-23_ineq
+- miplib_neos8_ineq
+- miplib_nursesched-sprint02_ineq
+- miplib_neos-2987310-joes_eq
+- miplib_app1-1_ineq
+- miplib_neos-3381206-awhea_ineq
+- miplib_physiciansched6-2_eq
+- miplib_p200x1188c_eq
+- miplib_swath1_eq
+- miplib_nursesched-sprint02_eq
+- miplib_sp150x300d_eq
+- miplib_p200x1188c_ineq
+- miplib_n5-3_ineq
+- facility_p1
+- facility_p10
+- facility_p11
+- facility_p12
+- facility_p13
+- facility_p14
+- facility_p15
+- facility_p16
+- facility_p17
+- facility_p18
+- facility_p19
+- facility_p2
+- facility_p20
+- facility_p21
+- facility_p22
+- facility_p23
+- facility_p24
+- facility_p25
+- facility_p26
+- facility_p27
+- facility_p28
+- facility_p29
+- facility_p3
+- facility_p30
+- facility_p31
+- facility_p32
+- facility_p33
+- facility_p34
+- facility_p35
+- facility_p36
+- facility_p37
+- facility_p38
+- facility_p39
+- facility_p4
+- facility_p40
+- facility_p41
+- facility_p42
+- facility_p43
+- facility_p44
+- facility_p45
+- facility_p46
+- facility_p47
+- facility_p48
+- facility_p49
+- facility_p5
+- facility_p50
+- facility_p51
+- facility_p52
+- facility_p53
+- facility_p54
+- facility_p55
+- facility_p56
+- facility_p57
+- facility_p58
+- facility_p59
+- facility_p6
+- facility_p60
+- facility_p61
+- facility_p62
+- facility_p63
+- facility_p64
+- facility_p65
+- facility_p66
+- facility_p67
+- facility_p68
+- facility_p69
+- facility_p7
+- facility_p70
+- facility_p71
+- facility_p8
+- facility_p9
+- facility_saiwa
+- unit_100_0_1_w
+- unit_100_0_2_w
+- unit_100_0_3_w
+- unit_100_0_4_w
+- unit_100_0_5_w
+- unit_100_50_1_w
+- unit_100_50_2_w
+- unit_10_0_1_w
+- unit_10_0_2_w
+- unit_10_0_3_w
+- unit_10_0_4_w
+- unit_10_0_5_w
+- unit_150_0_1_w
+- unit_150_0_2_w
+- unit_150_0_3_w
+- unit_150_0_4_w
+- unit_150_0_5_w
+- unit_150_75_1_w
+- unit_150_75_2_w
+- unit_200_0_10_w
+- unit_200_0_11_w
+- unit_200_0_12_w
+- unit_200_0_1_w
+- unit_200_0_2_w
+- unit_200_0_3_w
+- unit_200_0_4_w
+- unit_200_0_5_w
+- unit_200_0_6_w
+- unit_200_0_7_w
+- unit_200_0_8_w
+- unit_200_0_9_w
+- unit_200_100_1_w
+- unit_200_100_2_w
+- unit_20_0_1_w
+- unit_20_0_2_w
+- unit_20_0_3_w
+- unit_20_0_4_w
+- unit_20_0_5_w
+- unit_20_10_1_w
+- unit_20_10_2_w
+- unit_50_0_1_w
+- unit_50_0_2_w
+- unit_50_0_3_w
+- unit_50_0_4_w
+- unit_50_0_5_w
+- unit_50_20_1_w
+- unit_50_20_2_w
+- unit_75_0_1_w
+- unit_75_0_2_w
+- unit_75_0_3_w
+- unit_75_0_4_w
+- unit_75_0_5_w
+- unit_75_35_1_w
+- unit_75_35_2_w
 
 NS:
   - 2
   - 6
   - 11
 
-BOUND_TYPES:
-  robust_flat: True
-  robust_line_left: True
-  robust_line_right: True
-  robust_xyflat: True
-  lagrangian_flat: True
-  lagrangian_line: True
-  lagrangian_quadratic: True
-  robust_concave_envelope: True
-  robust_fixed_slope_pairwise: True
-  lagrangian_envelope: True
+BOUND_TYPES_LP:
+  - robust_flat
+  - robust_line_left
+  - robust_line_right
+  - robust_xyflat
+  - lagrangian_flat
+  - lagrangian_flat_coef
+  - lagrangian_bisegment
+  - lagrangian_bisegment_coef
+  - robust_concave_envelope
+  - robust_fixed_slope_pairwise
+  - component_flat
+
+BOUND_TYPES_MIP:
+  robust_flat: ["ub"]
+  component_flat: ["lb", "ub"]
+  lagrangian_flat: ["lb"]
+  lagrangian_flat_coef: ["lb"]
+  lagrangian_bisegment: ["lb"]
+  lagrangian_bisegment_coef: ["lb"]
 
 
 UPPER_BOUNDS_SELECTED:
-  - robust_fixed_slope_pairwise
-  - robust_xyflat
-  - robust_line_right
-  - robust_flat
+  - component_flat
 
 LOWER_BOUNDS_SELECTED:
-  - robust_fixed_slope_pairwise
-  - robust_xyflat
-  - robust_line_right
-  - robust_flat
-  - lagrangian_flat
+  - component_flat

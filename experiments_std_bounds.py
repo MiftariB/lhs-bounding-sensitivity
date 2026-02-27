@@ -1,13 +1,14 @@
 import base64
-import sys
 
 from bounds.primary.robust import bound_robust_flat, bound_robust_fixed_slope_pairwise
 from bounds.primary.robust import bound_robust_line_left
 from bounds.primary.robust import bound_robust_line_right
 from bounds.primary.robust import bound_robust_xyflat
-from bounds.primary.lagrangian import bound_lagrangian_flat, bound_lagrangian_line, bound_lagrangian_quadratic, \
+from bounds.primary.lagrangian import bound_lagrangian_bisegment_coef_adv, bound_lagrangian_flat, bound_lagrangian_flat_coef_adv, bound_lagrangian_line, bound_lagrangian_quadratic, \
     bound_lagrangian_envelope
 from bounds.primary.robust import robust_concave_envelope
+from bounds.primary.coefficient_bound import coefficient_flat
+from bounds.primary.lagrangian import bound_lagrangian_bisegment, bound_lagrangian_bisegment_coef, bound_lagrangian_flat, bound_lagrangian_flat_coef
 
 import multiprocessing
 import numpy as np
@@ -23,6 +24,12 @@ bounds = {
     "robust_line_right": bound_robust_line_right,
     "robust_xyflat": bound_robust_xyflat,
     "lagrangian_flat": bound_lagrangian_flat,
+    "lagrangian_flat_coef": bound_lagrangian_flat_coef,
+    "lagrangian_flat_coef_adv": bound_lagrangian_flat_coef_adv,
+    "lagrangian_bisegment": bound_lagrangian_bisegment,
+    "lagrangian_bisegment_coef": bound_lagrangian_bisegment_coef,
+    "lagrangian_bisegment_coef_adv": bound_lagrangian_bisegment_coef_adv,
+    "component_flat": coefficient_flat,
     "lagrangian_quadratic": bound_lagrangian_quadratic,
     "lagrangian_line": bound_lagrangian_line,
     "robust_concave_envelope": robust_concave_envelope,
@@ -34,6 +41,7 @@ bounds = {
 def solve(N, bound_name, bound_type, problem_name, output):
     bnd = bounds[bound_name]
     problem = PROBLEMS[problem_name]()
+    
     space = np.linspace(*problem.range, N)
 
     if bound_type == "ub":

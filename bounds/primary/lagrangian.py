@@ -5,17 +5,24 @@ import scipy.sparse as sp
 
 from bounds.bound_utils import Error, Constant, Line, Quadratic, Maximize, get_logger, Minimize
 from bounds.primary import lower_bound, multi_bound
-from problems import Problem_sparse
+from problems import Problem_sparse, solve
 from solveapi import solve_api, NoSolution
 
 
-def get_sol_and_alpha(problem, lbd):
+def get_sol_and_alpha(problem, lbd, coef_lbds=None):
+    """ Solve the lagrangian (linearized) problem for a given lambda and return the solution and the dual variables 
+    """
     assert isinstance(problem, Problem_sparse)
 
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
 
     api = solve_api("cplex")
-    api.add_var(a_1_eq.shape[1])
+
+    lb = [None if vt != 'B' else 0 for vt in var_types] if var_types is not None else None
+    ub = [None if vt != 'B' else 1 for vt in var_types] if var_types is not None else None
+
+    # here we ignore var_types to get the dual
+    api.add_var(a_1_eq.shape[1], lb=lb, ub=ub)
 
     api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
     api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
@@ -23,10 +30,27 @@ def get_sol_and_alpha(problem, lbd):
     api.add_constr((a_2_eq + lbd * d_eq), "==", b_2_eq.reshape(-1, ))
     api.add_constr((a_2_ineq + lbd * d_ineq), "<=", b_2_ineq.reshape(-1, ))
 
-    concerned_eq = slice(a_1_eq.shape[0] + a_1_ineq.shape[0],
+    if coef_lbds is not None:
+        lbd_1, lbd_2 = coef_lbds
+
+        def change_d_matrix(array, lbd_1, lbd_2):
+            return np.where(array > 0, lbd_1 * array, lbd_2 * array)
+    
+        new_d_matrix_data_ineq = change_d_matrix(d_ineq.data, lbd_1, lbd_2)
+        new_d_matrix_ineq = sp.csr_matrix((new_d_matrix_data_ineq, d_ineq.indices, d_ineq.indptr), shape=d_ineq.shape)
+        new_d_matrix_data_eq_pos = change_d_matrix(np.array(d_eq.data), lbd_1, lbd_2)
+        new_d_matrix_data_eq_neg = change_d_matrix(-np.array(d_eq.data), lbd_1, lbd_2)
+        new_d_matrix_eq_pos = sp.csr_matrix((new_d_matrix_data_eq_pos, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+        new_d_matrix_eq_neg = sp.csr_matrix((new_d_matrix_data_eq_neg, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+
+        api.add_constr((a_2_ineq + new_d_matrix_ineq), "<=", b_2_ineq.reshape(-1, ))
+        api.add_constr(a_2_eq + new_d_matrix_eq_pos, "<=", b_2_eq.reshape(-1, ))
+        api.add_constr(-a_2_eq + new_d_matrix_eq_neg, "<=", -b_2_eq.reshape(-1, ))
+
+    d_eqs = slice(a_1_eq.shape[0] + a_1_ineq.shape[0],
                          a_1_eq.shape[0] + a_1_ineq.shape[0] + a_2_eq.shape[0])
 
-    concerned_ineq = slice(a_1_eq.shape[0] + a_1_ineq.shape[0] + a_2_eq.shape[0],
+    d_ineqs = slice(a_1_eq.shape[0] + a_1_ineq.shape[0] + a_2_eq.shape[0],
                            a_1_eq.shape[0] + a_1_ineq.shape[0] + a_2_eq.shape[0] + a_2_ineq.shape[0])
 
     api.set_obj(c.transpose(), "minimize" if mini else "maximize")
@@ -36,25 +60,33 @@ def get_sol_and_alpha(problem, lbd):
     if status == "unknown":
         return None
     dual = api.get_dual()
-    return api.get_objective(), dual[concerned_eq], dual[concerned_ineq]
+    optimal_lb_obj = api.get_objective()
+
+    dual_eqs = dual[d_eqs]
+    dual_ineqs = dual[d_ineqs]
+
+    return optimal_lb_obj, dual_eqs, dual_ineqs
 
 
 def get_sol_for_alpha(problem, lbd, alpha_eq, alpha_ineq):
     assert isinstance(problem, Problem_sparse)
 
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
     api = solve_api("cplex")
-    api.add_var(a_1_eq.shape[1])
+    nb_var = a_1_ineq.shape[1]
+    api.add_var(a_1_eq.shape[1], lb=[None]*nb_var, ub=([None]*nb_var), types=var_types)
     api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
     api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
-    api.set_obj(c.transpose()-(alpha_eq.transpose() @ (a_2_eq + lbd * d_eq))
-                - (alpha_ineq.transpose() @ (a_2_ineq + lbd * d_ineq)),
-                "minimize" if mini else "maximize")
+
+    c_eq = (alpha_eq.transpose() @ (a_2_eq + lbd * d_eq))
+    c_ineq = (alpha_ineq.transpose() @ (a_2_ineq + lbd * d_ineq))
+    api.set_obj(c.transpose() - c_eq - c_ineq, "minimize" if mini else "maximize")
 
     api.optimize()
     status = api.get_status()
     if status == "unknown":
         return None
+    
     return api.get_objective() + (alpha_eq.transpose() @ b_2_eq) + (alpha_ineq.transpose() @ b_2_ineq)
 
 @multi_bound
@@ -222,12 +254,14 @@ def bound_lagrangian_envelope(problem, lbds, do_log=False):
         "bounds": out
     }
 
+
 @multi_bound
 @lower_bound
-def bound_lagrangian_flat(problem, lbds, do_log=False):
+def bound_lagrangian_iter(problem, lbds, do_log=False):
+    assert len(lbds) == 2 # TODO re-enable this
     assert isinstance(problem, Problem_sparse)
     log = get_logger(do_log)
-
+    lbd_1, lbd_2 = lbds
     start = time.time()
 
     gt_points = []
@@ -237,14 +271,135 @@ def bound_lagrangian_flat(problem, lbds, do_log=False):
 
     log("Done computing ground truth")
 
-
     # instance
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ ,_ = problem
+
     api = solve_api("cplex")
     api.add_var(a_1_eq.shape[1])
+
+    def change_d_matrix(array):
+        return np.where(array > 0, lbd_1 * array, lbd_2 * array)
+
+
+    new_d_matrix_data_ineq = change_d_matrix(d_ineq.data)
+    new_d_matrix_ineq = sp.csr_matrix((new_d_matrix_data_ineq, d_ineq.indices, d_ineq.indptr), shape=d_ineq.shape)
+
+    new_d_matrix_data_eq_pos = change_d_matrix(np.array(d_eq.data))
+    new_d_matrix_data_eq_neg = change_d_matrix(-np.array(d_eq.data))
+    # We need to create two different matrices for the equality constraints
+    # new_d_matrix_eq_pos = d_eq
+    # new_d_matrix_eq_neg = d_eq
+    new_d_matrix_eq_pos = sp.csr_matrix((new_d_matrix_data_eq_pos, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+    new_d_matrix_eq_neg = sp.csr_matrix((new_d_matrix_data_eq_neg, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+
     api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
     api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
+    api.add_constr((a_2_ineq + new_d_matrix_ineq), "<=", b_2_ineq.reshape(-1, ))
+    api.add_constr(a_2_eq + new_d_matrix_eq_pos, "<=", b_2_eq.reshape(-1, ))
+    api.add_constr(-a_2_eq + new_d_matrix_eq_neg, "<=", -b_2_eq.reshape(-1, ))
 
+    def get_sol_for_alpha(lbd, alpha_eq, alpha_ineq, lpmethod=0):
+        api.set_obj(c.transpose() - (alpha_eq.transpose() @ (a_2_eq + lbd * d_eq))
+                    - (alpha_ineq.transpose() @ (a_2_ineq + lbd * d_ineq)),
+                    "minimize" if mini else "maximize")
+
+        api.optimize(lpmethod=lpmethod)
+        status = api.get_status()
+        if status == "unknown":
+            return None
+        return api.get_objective() + (alpha_eq.transpose() @ b_2_eq) + (alpha_ineq.transpose() @ b_2_ineq)
+
+    sols_1 = []
+    sols_2 = []
+    sol_lbd_1 = gt_points[0]
+    sol_lbd_2 = gt_points[1]
+    x = np.linspace(lbd_1, lbd_2, 10)
+    for j, i in enumerate(x):
+        log(f"Solving left {j}/{len(x)}")
+        if len(sols_1) and sols_1[-1] is None:
+            sols_1.append(None)
+            continue
+
+        sols_1.append(get_sol_for_alpha(i, sol_lbd_1[1], sol_lbd_1[2], lpmethod=4 if j == 0 else 0))
+    for j, i in enumerate(reversed(x)):
+        log(f"Solving right {j}/{len(x)}")
+        if len(sols_2) and sols_2[-1] is None:
+            sols_2.append(None)
+            continue
+
+        sols_2.append(get_sol_for_alpha(i, sol_lbd_2[1], sol_lbd_2[2], lpmethod=4 if j == 0 and sols_1[-1] is None else 0))
+    sols_2 = list(reversed(sols_2))
+
+    return x, sols_1, sols_2
+
+
+@multi_bound
+@lower_bound
+def bound_lagrangian_flat(problem, lbds, do_log=False):
+    return bound_lagrangian_flat_internal(problem, lbds, coef=False, segment=False, do_log=do_log)
+
+@multi_bound
+@lower_bound
+def bound_lagrangian_flat_coef(problem, lbds, do_log=False):
+    return bound_lagrangian_flat_internal(problem, lbds, coef=True, segment=False, do_log=do_log)
+
+@multi_bound
+@lower_bound
+def bound_lagrangian_flat_coef_adv(problem, lbds, do_log=False):
+    return bound_lagrangian_flat_internal(problem, lbds, coef="adv", segment=False, do_log=do_log)
+
+@multi_bound
+@lower_bound
+def bound_lagrangian_bisegment(problem, lbds, do_log=False):
+    return bound_lagrangian_flat_internal(problem, lbds, coef=False, segment=True, do_log=do_log)
+
+@multi_bound
+@lower_bound
+def bound_lagrangian_bisegment_coef(problem, lbds, do_log=False):
+    return bound_lagrangian_flat_internal(problem, lbds, coef=True, segment=True, do_log=do_log)
+
+@multi_bound
+@lower_bound
+def bound_lagrangian_bisegment_coef_adv(problem, lbds, do_log=False):
+    return bound_lagrangian_flat_internal(problem, lbds, coef="adv", segment=True, do_log=do_log)
+
+def bound_lagrangian_flat_internal(problem, lbds, coef, segment, do_log=False):
+    assert isinstance(problem, Problem_sparse)
+
+    if coef:
+        problem = problem.positive()
+    
+    #if segment:
+    #    # bi-segment only works on linear problems
+    #    problem = problem.linear()
+
+    log = get_logger(do_log)
+    start = time.time()
+
+    if coef != "adv":
+        gt_points = []
+        for idx, lbd in enumerate(lbds):
+            log(f"Solving 'linear ground truth problem' n°{idx}/{len(lbds)}")
+            gt_points.append(get_sol_and_alpha(problem, lbd))
+    else:
+        gt_points = None
+
+    log("Done computing ground truth")
+
+    # instance
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
+
+    is_milp = ('I' in var_types or 'B' in var_types) if var_types is not None else False
+    
+    api = solve_api("cplex")
+    api.add_var(a_1_eq.shape[1], types=var_types)
+
+    def change_d_matrix(array, lbd_1, lbd_2):
+        return np.where(array > 0, lbd_1 * array, lbd_2 * array)
+
+    api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
+    api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
+    
     def get_sol_for_alpha(lbd, alpha_eq, alpha_ineq):
         api.set_obj(c.transpose() - (alpha_eq.transpose() @ (a_2_eq + lbd * d_eq))
                     - (alpha_ineq.transpose() @ (a_2_ineq + lbd * d_ineq)),
@@ -253,35 +408,80 @@ def bound_lagrangian_flat(problem, lbds, do_log=False):
         api.optimize()
         status = api.get_status()
         if status == "unknown":
-            return None
-        return api.get_objective() + (alpha_eq.transpose() @ b_2_eq) + (alpha_ineq.transpose() @ b_2_ineq)
+            out = None
+        else:
+            out = api.get_objective() + (alpha_eq.transpose() @ b_2_eq) + (alpha_ineq.transpose() @ b_2_ineq)
+
+        return out
 
     def get_bound(lbd_1, sol_low, alpha_low_eq, alpha_low_ineq, lbd_2, sol_high, alpha_high_eq, alpha_high_ineq):
-        bound = float("-inf")
-        f = max
-        f2 = min
+        if coef:
+            new_d_matrix_data_ineq = change_d_matrix(d_ineq.data, lbd_1, lbd_2)
+            new_d_matrix_ineq = sp.csr_matrix((new_d_matrix_data_ineq, d_ineq.indices, d_ineq.indptr), shape=d_ineq.shape)
+            new_d_matrix_data_eq_pos = change_d_matrix(np.array(d_eq.data), lbd_1, lbd_2)
+            new_d_matrix_data_eq_neg = change_d_matrix(-np.array(d_eq.data), lbd_1, lbd_2)
+            new_d_matrix_eq_pos = sp.csr_matrix((new_d_matrix_data_eq_pos, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+            new_d_matrix_eq_neg = sp.csr_matrix((new_d_matrix_data_eq_neg, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
 
-        if not problem.minimize:
-            bound = float("inf")
-            f = min
-            f2 = max
+            first_idx, _ = api.add_constr((a_2_ineq + new_d_matrix_ineq), "<=", b_2_ineq.reshape(-1, ))
+            api.add_constr(a_2_eq + new_d_matrix_eq_pos, "<=", b_2_eq.reshape(-1, ))
+            _, last_idx = api.add_constr(-a_2_eq + new_d_matrix_eq_neg, "<=", -b_2_eq.reshape(-1, ))
+        
+        line2_l = get_sol_for_alpha(lbd_1, alpha_high_eq, alpha_high_ineq)
+        line2_r = sol_high if coef is False and not is_milp else get_sol_for_alpha(lbd_2, alpha_high_eq, alpha_high_ineq)
 
-        hl = get_sol_for_alpha(lbd_1, alpha_high_eq, alpha_high_ineq)
-        if hl is not None:
-            bound = f(bound, f2(hl, sol_high))
+        line1_l = sol_low if coef is False and not is_milp else get_sol_for_alpha(lbd_1, alpha_low_eq, alpha_low_ineq)
+        line1_r = get_sol_for_alpha(lbd_2, alpha_low_eq, alpha_low_ineq)
 
-        hl = get_sol_for_alpha(lbd_2, alpha_low_eq, alpha_low_ineq)
-        if hl is not None:
-            bound = f(bound, f2(hl, sol_low))
-
-        if bound != float("inf") and bound != float("-inf"):
-            return Constant(bound, (lbd_1, lbd_2))
+        if coef:
+            api.delete_constr(list(range(first_idx, last_idx)))
+        
+        if line1_r is not None and line1_l is not None:
+            if segment:
+                slope1 = (line1_r - line1_l)/(lbd_2-lbd_1)
+                line1 = Line(slope1, line1_l - slope1 * lbd_1, (lbd_1, lbd_2))
+            elif problem.minimize:
+                line1 = Constant(min(line1_l, line1_r), (lbd_1, lbd_2))
+            else:
+                line1 = Constant(max(line1_l, line1_r), (lbd_1, lbd_2))
         else:
+            line1 = Error()
+
+        if line2_l is not None and line2_r is not None:
+            if segment:
+                slope2 = (line2_r - line2_l)/(lbd_2-lbd_1)
+                line2 = Line(slope2, line2_r - slope2*lbd_2, (lbd_1, lbd_2))
+            elif problem.minimize:
+                line2 = Constant(min(line2_l, line2_r), (lbd_1, lbd_2))
+            else:
+                line2 = Constant(max(line2_l, line2_r), (lbd_1, lbd_2))
+        else:
+            line2 = Error()
+        
+        if isinstance(line1, Error) and isinstance(line2, Error):
             return Error()
+        elif isinstance(line1, Error):
+            return line2
+        elif isinstance(line2, Error):
+            return line1
+        else:
+            if problem.minimize:
+                return Maximize([line1, line2], limits=(lbd_1, lbd_2))
+            else:
+                return Minimize([line1, line2], limits=(lbd_1, lbd_2))
 
     out = []
-    for idx, ((lbd_1, sol_lbd_1), (lbd_2, sol_lbd_2)) in enumerate(itertools.pairwise(zip(lbds, gt_points))):
-        log(f"Computing bound n°{idx}/{len(lbds)-1}")
+    for cnt, (idx_1, idx_2) in enumerate(itertools.pairwise(range(len(lbds)))):
+        lbd_1 = lbds[idx_1]
+        lbd_2 = lbds[idx_2]
+        log(f"Computing bound n°{cnt}/{len(lbds)-1}")
+        if coef != "adv":
+            sol_lbd_1 = gt_points[idx_1]
+            sol_lbd_2 = gt_points[idx_2]
+        else:
+            sol_lbd_1 = get_sol_and_alpha(problem, lbd_1, (lbd_1, lbd_2))
+            sol_lbd_2 = get_sol_and_alpha(problem, lbd_2, (lbd_1, lbd_2))
+
         if sol_lbd_1 is None or sol_lbd_2 is None:
             out.append({
                 "bound": Error(),
@@ -306,7 +506,7 @@ def bound_lagrangian_flat(problem, lbds, do_log=False):
 def bound_lagrangian_quadratic(problem, lbds, do_log=False, separate=False):
     assert isinstance(problem, Problem_sparse)
     log = get_logger(do_log)
-
+    lbd_1, lbd_2 = min(lbds), max(lbds)
     start = time.time()
 
     for idx in range(len(lbds)-1):
@@ -322,13 +522,30 @@ def bound_lagrangian_quadratic(problem, lbds, do_log=False, separate=False):
 
     log("Done computing ground truth")
 
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _, _ = problem
+
+    def change_d_matrix(array):
+        return np.where(array > 0, lbd_1 * array, lbd_2 * array)
 
     def gen_problem():
         api = solve_api("cplex")
         api.add_var(a_1_eq.shape[1])
+        new_d_matrix_data_ineq = change_d_matrix(d_ineq.data)
+        new_d_matrix_ineq = sp.csr_matrix((new_d_matrix_data_ineq, d_ineq.indices, d_ineq.indptr), shape=d_ineq.shape)
+
+        new_d_matrix_data_eq_pos = change_d_matrix(np.array(d_eq.data))
+        new_d_matrix_data_eq_neg = change_d_matrix(-np.array(d_eq.data))
+        # We need to create two different matrices for the equality constraints
+        # new_d_matrix_eq_pos = d_eq
+        # new_d_matrix_eq_neg = d_eq
+        new_d_matrix_eq_pos = sp.csr_matrix((new_d_matrix_data_eq_pos, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+        new_d_matrix_eq_neg = sp.csr_matrix((new_d_matrix_data_eq_neg, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+
         api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
         api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
+        api.add_constr((a_2_ineq + new_d_matrix_ineq), "<=", b_2_ineq.reshape(-1, ))
+        api.add_constr(a_2_eq + new_d_matrix_eq_pos, "<=", b_2_eq.reshape(-1, ))
+        api.add_constr(-a_2_eq + new_d_matrix_eq_neg, "<=", -b_2_eq.reshape(-1, ))
         return api
 
     part1 = gen_problem()
@@ -437,13 +654,31 @@ def bound_lagrangian_line(problem, lbds, do_log=False, separate=False):
 
     log("Done computing ground truth")
 
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _, _ = problem
+
+    def change_d_matrix(array):
+        lbd_1, lbd_2 = min(lbds), max(lbds)
+        return np.where(array > 0, lbd_1 * array, lbd_2 * array)
 
     def gen_problem():
         api = solve_api("cplex")
         api.add_var(a_1_eq.shape[1])
+        new_d_matrix_data_ineq = change_d_matrix(d_ineq.data)
+        new_d_matrix_ineq = sp.csr_matrix((new_d_matrix_data_ineq, d_ineq.indices, d_ineq.indptr), shape=d_ineq.shape)
+
+        new_d_matrix_data_eq_pos = change_d_matrix(np.array(d_eq.data))
+        new_d_matrix_data_eq_neg = change_d_matrix(-np.array(d_eq.data))
+        # We need to create two different matrices for the equality constraints
+        # new_d_matrix_eq_pos = d_eq
+        # new_d_matrix_eq_neg = d_eq
+        new_d_matrix_eq_pos = sp.csr_matrix((new_d_matrix_data_eq_pos, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+        new_d_matrix_eq_neg = sp.csr_matrix((new_d_matrix_data_eq_neg, d_eq.indices, d_eq.indptr), shape=d_eq.shape)
+
         api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
         api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
+        api.add_constr((a_2_ineq + new_d_matrix_ineq), "<=", b_2_ineq.reshape(-1, ))
+        api.add_constr(a_2_eq + new_d_matrix_eq_pos, "<=", b_2_eq.reshape(-1, ))
+        api.add_constr(-a_2_eq + new_d_matrix_eq_neg, "<=", -b_2_eq.reshape(-1, ))
         return api
 
     part1 = gen_problem()

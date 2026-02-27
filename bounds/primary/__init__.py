@@ -80,6 +80,13 @@ def lower_bound(fct):
     fct.ub = lambda problem, *args, **kwargs: fct(problem.dual(), *args, **kwargs)
     return fct
 
+def bi_bound(fct_lb, fct_ub):
+    def decorator(fct):
+        fct.lb = fct_lb
+        fct.ub = fct_ub
+        return fct
+    return decorator
+    
 
 def perfect_bound(fct):
     """ Decorator for a function that computes a bound. The first argument of the function must be the problem

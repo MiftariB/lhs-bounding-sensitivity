@@ -59,7 +59,7 @@ class Maximize:
     limits: Optional[Tuple[float, float]]
 
     def __call__(self, space):
-        return _limit_space_and_run(space, self.limits, lambda s: np.array([x(s) for x in self.objects]).max(axis=0))
+        return _limit_space_and_run(space, self.limits, lambda s: np.nan_to_num(np.array([x(s) for x in self.objects]),nan=-np.inf).max(axis=0))
         #return np.max(np.array([_limit_space_and_run(space, self.limits, f) for f in self.objects]), axis=1)
 
 @dataclass
@@ -69,7 +69,7 @@ class Minimize:
     limits: Optional[Tuple[float, float]]
 
     def __call__(self, space):
-        return _limit_space_and_run(space, self.limits, lambda s: np.array([x(s) for x in self.objects]).min(axis=0))
+        return _limit_space_and_run(space, self.limits, lambda s: np.nan_to_num(np.array([x(s) for x in self.objects]),nan=np.inf).min(axis=0))
 
 
 @dataclass

@@ -11,7 +11,7 @@ import numpy as np
 
 
 def matrix_view_problem(problem, lbd_1, lbd_2, lbd_opt):
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
     _, nb_var = a_1_ineq.shape
 
     mid = (lbd_1 + lbd_2) / 2
@@ -198,10 +198,10 @@ def bound_robust_flat(problem, lbd_1, lbd_2):
     """
     assert isinstance(problem, Problem_sparse)
 
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
 
     api = solve_api("cplex")
-    api.add_var(a_1_eq.shape[1])
+    api.add_var(a_1_eq.shape[1], types=var_types)
     api.add_constr(a_1_eq, "==", b_1_eq.reshape(-1, ))
     api.add_constr(a_1_ineq, "<=", b_1_ineq.reshape(-1, ))
     api.add_constr((a_2_ineq + lbd_1 * d_ineq), "<=", b_2_ineq.reshape(-1, ))
@@ -238,7 +238,7 @@ def bound_robust_line(problem, lbd_1, lbd_2, opti_first=None, opti_second=False)
 
     assert isinstance(problem, Problem_sparse)
 
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
 
     api = solve_api("cplex")
     nb_var = a_1_ineq.shape[1]
@@ -313,7 +313,7 @@ def bound_robust_line(problem, lbd_1, lbd_2, opti_first=None, opti_second=False)
 @upper_bound
 def bound_robust_fixed_slope_pairwise(problem, lbds, do_log=False):
     assert isinstance(problem, Problem_sparse)
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
 
     log = get_logger(do_log)
 
@@ -344,7 +344,7 @@ def bound_robust_fixed_slope_pairwise(problem, lbds, do_log=False):
 @upper_bound
 def bound_robust_fixed_slope(problem, lbd_1, lbd_2, first_obj=None, second_obj=None, fixed_slope=None):
     assert isinstance(problem, Problem_sparse)
-    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, _ = problem
+    a_1_eq, b_1_eq, a_1_ineq, b_1_ineq, a_2_eq, b_2_eq, d_eq, a_2_ineq, b_2_ineq, d_ineq, c, mini, _, var_types, _, _ = problem
     if first_obj is None and fixed_slope is None:
         first_obj = solve_sparse(problem, lbd_1, debug=True)
     if second_obj is None and fixed_slope is None:
